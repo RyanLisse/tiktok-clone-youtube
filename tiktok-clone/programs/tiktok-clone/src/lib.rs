@@ -1,12 +1,11 @@
 /// Include libraries for program
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::log::sol_log_compute_units;
 use anchor_spl::token::{self, Token};
+use solana_program::entrypoint::ProgramResult;
 use std::mem::size_of;
-use anchor_lang::solana_program::log::{
-    sol_log_compute_units
-};
 // Declare program ID
-declare_id!("Az4edEtU6JtghfueC4hS7Fo5fG3evPY5VUt6YbNHmhaN");
+declare_id!("3ZKvQrvvhYhsmKf4ZJLCW8kVDxEARA4FMKGTW8KKU3jk");
 
 // Video and comment text length
 const TEXT_LENGTH: usize = 1024;
@@ -26,9 +25,7 @@ pub mod tiktok_clone {
     /// Create state to save the video counts
     /// There is only one state in the program
     /// This account should be initialized before video
-    pub fn create_state(
-        ctx: Context<CreateState>,
-    ) -> ProgramResult {
+    pub fn create_state(ctx: Context<CreateState>) -> ProgramResult {
         // Get state from context
         let state = &mut ctx.accounts.state;
         // Save authority to state
@@ -44,13 +41,11 @@ pub mod tiktok_clone {
     pub fn create_user(
         ctx: Context<CreateUser>,
         name: String,
-        profile_url: String
+        profile_url: String,
     ) -> ProgramResult {
         // Get State
 
-       if name.trim().is_empty() || profile_url.trim().is_empty() {
-           return Err(Errors::CannotCreateUser.into());
-       }
+        if name.trim().is_empty() || profile_url.trim().is_empty() {}
         // Get video
         let user = &mut ctx.accounts.user;
         // Set authority
@@ -59,7 +54,7 @@ pub mod tiktok_clone {
         user.user_name = name;
         user.user_profile_image_url = profile_url;
 
-        msg!("User Added!");  //logging
+        msg!("User Added!"); //logging
         sol_log_compute_units(); //Logs how many compute units are left, important for budget
         Ok(())
     }
@@ -76,11 +71,9 @@ pub mod tiktok_clone {
         creator_url: String,
     ) -> ProgramResult {
         // Get State
-       msg!(&description);  //logging
+        msg!(&description); //logging
 
-       if description.trim().is_empty() || video_url.trim().is_empty() {
-           return Err(Errors::CannotCreateVideo.into());
-       }
+        if description.trim().is_empty() || video_url.trim().is_empty() {}
         let state = &mut ctx.accounts.state;
 
         // Get video
@@ -108,11 +101,10 @@ pub mod tiktok_clone {
 
         // Increase state's video count by 1
         state.video_count += 1;
-        msg!("Video Added!");  //logging
+        msg!("Video Added!"); //logging
         sol_log_compute_units(); //Logs how many compute units are left, important for budget
         Ok(())
     }
-
 
     /// Create comment for video
     /// @param text:            text of comment
@@ -124,12 +116,9 @@ pub mod tiktok_clone {
         commenter_name: String,
         commenter_url: String,
     ) -> ProgramResult {
-
         // Get video
         let video = &mut ctx.accounts.video;
-        if video.remove <= -500 {
-            return Err(Errors::UserCensoredVideo.into());
-        }
+        if video.remove <= -500 {}
         // Get comment
         let comment = &mut ctx.accounts.comment;
         // Set authority to comment
@@ -151,9 +140,7 @@ pub mod tiktok_clone {
         Ok(())
     }
 
-    pub fn approve(
-        ctx: Context<CreateComment>,
-    ) -> ProgramResult {
+    pub fn approve(ctx: Context<CreateComment>) -> ProgramResult {
         // Get video
         let video = &mut ctx.accounts.video;
 
@@ -163,10 +150,7 @@ pub mod tiktok_clone {
         Ok(())
     }
 
-    pub fn disapprove(
-        ctx: Context<CreateComment>,
-
-    ) -> ProgramResult {
+    pub fn disapprove(ctx: Context<CreateComment>) -> ProgramResult {
         // Get video
         let video = &mut ctx.accounts.video;
 
@@ -179,26 +163,19 @@ pub mod tiktok_clone {
     pub fn like_video(ctx: Context<LikeVideo>) -> ProgramResult {
         let video = &mut ctx.accounts.video;
 
-        if video.likes == NUMBER_OF_ALLOWED_LIKES {
-            return Err(Errors::ReachedMaxLikes.into());
-        }
-        if video.remove == -500 {
-            return Err(Errors::UserCensoredVideo.into());
-        }
+        if video.likes == NUMBER_OF_ALLOWED_LIKES {}
+        if video.remove == -500 {}
 
         // Iterating accounts is safer then indexing
         let mut iter = video.people_who_liked.iter();
         let user_liking_video = ctx.accounts.authority.key();
-        if iter.any(|&v| v == user_liking_video) {
-            return Err(Errors::UserLikedVideo.into());
-        }
+        if iter.any(|&v| v == user_liking_video) {}
 
         video.likes += 1;
         video.people_who_liked.push(user_liking_video);
 
         Ok(())
     }
-
 }
 
 /// Contexts
@@ -350,15 +327,14 @@ pub struct LikeVideo<'info> {
 #[derive(Accounts)]
 pub struct Approve<'info> {
     #[account(mut)]
-    pub video: Account<'info, VideoAccount>
+    pub video: Account<'info, VideoAccount>,
 }
 
 #[derive(Accounts)]
 pub struct DisApprove<'info> {
     #[account(mut)]
-    pub video: Account<'info, VideoAccount>
+    pub video: Account<'info, VideoAccount>,
 }
-
 
 // State Account Structure
 #[account]
@@ -439,24 +415,4 @@ pub struct CommentAccount {
 
     // Video time
     pub video_time: i64,
-}
-
-
-#[error]
-pub enum Errors {
-    #[msg("User cannot be created, missing data")]
-    CannotCreateUser,
-
-    #[msg("Video cannot be created, missing data")]
-    CannotCreateVideo,
-
-    #[msg("Cannot receive more than 5 likes")]
-    ReachedMaxLikes,
-
-
-    #[msg("User has already liked the tweet")]
-    UserLikedVideo,
-
-    #[msg("Video with potentially bad content")]
-    UserCensoredVideo,
 }
